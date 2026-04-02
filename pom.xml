@@ -40,7 +40,7 @@
         <dependency>
             <groupId>com.nvidia.cuvs</groupId>
             <artifactId>cuvs-java</artifactId>
-            <version>26.04.0</version>
+            <version>26.06.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.lucene</groupId>

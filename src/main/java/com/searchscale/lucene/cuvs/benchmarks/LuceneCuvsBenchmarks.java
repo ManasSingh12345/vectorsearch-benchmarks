@@ -481,8 +481,8 @@ public class LuceneCuvsBenchmarks {
       for (int t = 0; t < config.queryThreads; t++) {
         pool.submit(
             () -> {
-              while (queryId.getAndIncrement() <= config.numQueriesToRun) {
-                int currentQueryId = queryId.get();
+              int currentQueryId;
+              while ((currentQueryId = queryId.getAndIncrement()) <= config.numQueriesToRun) {
                 KnnFloatVectorQuery query;
 
                 if (config.algoToRun.equals(Codex.CAGRA_SEARCH)) {
@@ -513,11 +513,10 @@ public class LuceneCuvsBenchmarks {
                 } catch (IOException e) {
                   throw new RuntimeException("Problem during executing a query: ", e);
                 }
-                double searchTimeTakenMs =
-                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - searchStartTime);
+                double searchTimeTakenMs = (System.nanoTime() - searchStartTime) / 1_000_000.0;
                 // log.info("End to end search took: " + searchTimeTakenMs);
                 if (currentQueryId > config.numWarmUpQueries) {
-                  queryLatencies.put(queryId.get(), searchTimeTakenMs);
+                  queryLatencies.put(currentQueryId, searchTimeTakenMs);
                 }
                 int finishedCount = queriesFinished.incrementAndGet();
 
@@ -561,9 +560,9 @@ public class LuceneCuvsBenchmarks {
                   scores.add(hit.score);
                 }
                 double retrievalTimeTakenMs =
-                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - retrievalStartTime);
+                    (System.nanoTime() - retrievalStartTime) / 1_000_000.0;
                 if (currentQueryId > config.numWarmUpQueries) {
-                  retrievalLatencies.put(queryId.get(), retrievalTimeTakenMs);
+                  retrievalLatencies.put(currentQueryId, retrievalTimeTakenMs);
                 }
 
                 // Debug: Log results for all queries
