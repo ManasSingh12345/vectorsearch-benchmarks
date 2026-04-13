@@ -4,6 +4,7 @@ import com.nvidia.cuvs.CagraIndexParams.CagraGraphBuildAlgo;
 import com.nvidia.cuvs.CagraIndexParams.CodebookGen;
 import com.nvidia.cuvs.CagraIndexParams.CudaDataType;
 import com.nvidia.cuvs.CagraIndexParams.CuvsDistanceType;
+import com.nvidia.cuvs.CagraSearchParams;
 import com.searchscale.lucene.cuvs.benchmarks.LuceneCuvsBenchmarks.Codex;
 
 public class BenchmarkConfiguration {
@@ -46,6 +47,7 @@ public class BenchmarkConfiguration {
   public int cagraGraphDegree; // 64 default
   public int cagraITopK;
   public int cagraSearchWidth;
+  public CagraSearchParams.SearchAlgo cagraSearchAlgo = CagraSearchParams.SearchAlgo.AUTO;
   public int cagraHnswLayers; // layers in CAGRA->HNSW conversion
   public int efSearch;
   public CagraGraphBuildAlgo cagraGraphBuildAlgo;
@@ -139,6 +141,7 @@ public class BenchmarkConfiguration {
       sb.append("cuvsWriterThreads: ").append(cuvsWriterThreads).append('\n');
       sb.append("cagraITopK: ").append(cagraITopK).append('\n');
       sb.append("cagraSearchWidth: ").append(cagraSearchWidth).append('\n');
+      sb.append("cagraSearchAlgo: ").append(cagraSearchAlgo).append('\n');
       sb.append("cagraHnswLayers: ").append(cagraHnswLayers).append('\n');
       sb.append("cagraGraphBuildAlgo: ").append(cagraGraphBuildAlgo).append('\n');
     }

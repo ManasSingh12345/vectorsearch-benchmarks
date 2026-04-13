@@ -494,7 +494,8 @@ public class LuceneCuvsBenchmarks {
                           effectiveEfSearch,
                           null,
                           config.cagraITopK,
-                          config.cagraSearchWidth);
+                          config.cagraSearchWidth,
+                          config.cagraSearchAlgo);
                 } else {
                   int effectiveEfSearch = config.getEffectiveEfSearch();
                   query =
