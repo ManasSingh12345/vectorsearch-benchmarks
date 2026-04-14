@@ -47,7 +47,12 @@ public class BenchmarkConfiguration {
   public int cagraGraphDegree; // 64 default
   public int cagraITopK;
   public int cagraSearchWidth;
+  public int cagraThreadBlockSize; // 0 = auto; valid: 64, 128, 256, 512, 1024
+  public int cuvsStreamPoolSize = 8; // number of CUDA streams per query thread
   public CagraSearchParams.SearchAlgo cagraSearchAlgo = CagraSearchParams.SearchAlgo.AUTO;
+  public boolean cagraPersistent = false;
+  public float cagraPersistentLifetime = 2.0f;
+  public float cagraPersistentDeviceUsage = 1.0f;
   public int cagraHnswLayers; // layers in CAGRA->HNSW conversion
   public int efSearch;
   public CagraGraphBuildAlgo cagraGraphBuildAlgo;
@@ -141,7 +146,12 @@ public class BenchmarkConfiguration {
       sb.append("cuvsWriterThreads: ").append(cuvsWriterThreads).append('\n');
       sb.append("cagraITopK: ").append(cagraITopK).append('\n');
       sb.append("cagraSearchWidth: ").append(cagraSearchWidth).append('\n');
+      sb.append("cagraThreadBlockSize: ").append(cagraThreadBlockSize).append('\n');
+      sb.append("cuvsStreamPoolSize: ").append(cuvsStreamPoolSize).append('\n');
       sb.append("cagraSearchAlgo: ").append(cagraSearchAlgo).append('\n');
+      sb.append("cagraPersistent: ").append(cagraPersistent).append('\n');
+      sb.append("cagraPersistentLifetime: ").append(cagraPersistentLifetime).append('\n');
+      sb.append("cagraPersistentDeviceUsage: ").append(cagraPersistentDeviceUsage).append('\n');
       sb.append("cagraHnswLayers: ").append(cagraHnswLayers).append('\n');
       sb.append("cagraGraphBuildAlgo: ").append(cagraGraphBuildAlgo).append('\n');
     }

@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.codecs.Codec;
@@ -145,6 +146,8 @@ public class LuceneCuvsBenchmarks {
     if (args.length >= 3) {
       config.resultsDirectory = args[2];
     }
+    System.setProperty("com.nvidia.cuvs.streamPoolSize", String.valueOf(config.cuvsStreamPoolSize));
+
     Map<String, Object> metrics = new LinkedHashMap<String, Object>();
     List<QueryResult> queryResults = Collections.synchronizedList(new ArrayList<QueryResult>());
     config.debugPrintArguments();
@@ -475,7 +478,8 @@ public class LuceneCuvsBenchmarks {
       ConcurrentHashMap<Integer, Double> retrievalLatencies =
           new ConcurrentHashMap<Integer, Double>();
 
-      long startTime = System.currentTimeMillis();
+      long startTime = System.nanoTime();
+      AtomicLong postWarmupStartTime = new AtomicLong(0);
       AtomicInteger queryId = new AtomicInteger(0);
 
       for (int t = 0; t < config.queryThreads; t++) {
@@ -483,6 +487,9 @@ public class LuceneCuvsBenchmarks {
             () -> {
               int currentQueryId;
               while ((currentQueryId = queryId.getAndIncrement()) <= config.numQueriesToRun) {
+                if (currentQueryId == config.numWarmUpQueries + 1) {
+                  postWarmupStartTime.compareAndSet(0, System.nanoTime());
+                }
                 KnnFloatVectorQuery query;
 
                 if (config.algoToRun.equals(Codex.CAGRA_SEARCH)) {
@@ -495,7 +502,11 @@ public class LuceneCuvsBenchmarks {
                           null,
                           config.cagraITopK,
                           config.cagraSearchWidth,
-                          config.cagraSearchAlgo);
+                          config.cagraThreadBlockSize,
+                          config.cagraSearchAlgo,
+                          config.cagraPersistent,
+                          config.cagraPersistentLifetime,
+                          config.cagraPersistentDeviceUsage);
                 } else {
                   int effectiveEfSearch = config.getEffectiveEfSearch();
                   query =
@@ -606,12 +617,14 @@ public class LuceneCuvsBenchmarks {
       pool.shutdown();
       pool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 
-      long endTime = System.currentTimeMillis();
+      long endTime = System.nanoTime();
 
-      metrics.put(config.algoToRun + "-query-time", (endTime - startTime));
-      metrics.put(
-          config.algoToRun + "-query-throughput",
-          (config.numQueriesToRun / ((endTime - startTime) / 1000.0)));
+      long effectiveStartTime =
+          postWarmupStartTime.get() > 0 ? postWarmupStartTime.get() : startTime;
+      int postWarmupQueries = config.numQueriesToRun - config.numWarmUpQueries;
+      double elapsedSeconds = (endTime - effectiveStartTime) / 1_000_000_000.0;
+      metrics.put(config.algoToRun + "-query-time", (endTime - effectiveStartTime) / 1_000_000.0);
+      metrics.put(config.algoToRun + "-query-throughput", postWarmupQueries / elapsedSeconds);
       double avgLatency =
           new ArrayList<>(queryLatencies.values()).stream().reduce(0.0, Double::sum)
               / queryLatencies.size();
