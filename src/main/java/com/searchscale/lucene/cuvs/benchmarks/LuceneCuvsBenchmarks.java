@@ -146,7 +146,10 @@ public class LuceneCuvsBenchmarks {
     if (args.length >= 3) {
       config.resultsDirectory = args[2];
     }
-    System.setProperty("com.nvidia.cuvs.streamPoolSize", String.valueOf(config.cuvsStreamPoolSize));
+    if (config.cuvsWorkspacePoolSize > 0) {
+      System.setProperty(
+          "com.nvidia.cuvs.workspacePoolSize", String.valueOf(config.cuvsWorkspacePoolSize));
+    }
 
     Map<String, Object> metrics = new LinkedHashMap<String, Object>();
     List<QueryResult> queryResults = Collections.synchronizedList(new ArrayList<QueryResult>());
@@ -503,10 +506,7 @@ public class LuceneCuvsBenchmarks {
                           config.cagraITopK,
                           config.cagraSearchWidth,
                           config.cagraThreadBlockSize,
-                          config.cagraSearchAlgo,
-                          config.cagraPersistent,
-                          config.cagraPersistentLifetime,
-                          config.cagraPersistentDeviceUsage);
+                          config.cagraSearchAlgo);
                 } else {
                   int effectiveEfSearch = config.getEffectiveEfSearch();
                   query =
