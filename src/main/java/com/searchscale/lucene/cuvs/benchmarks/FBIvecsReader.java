@@ -212,6 +212,39 @@ public class FBIvecsReader {
     }
   }
 
+  public static void readF16bin(String filePath, int numRows, List<float[]> vectors) {
+    log.info("Reading {} from file: {}", numRows, filePath);
+
+    try (InputStream is = new FileInputStream(filePath)) {
+      byte[] numVecBytes = is.readNBytes(4);
+      ByteBuffer numVecBuffer = ByteBuffer.wrap(numVecBytes).order(ByteOrder.LITTLE_ENDIAN);
+      int numVectors = numVecBuffer.getInt();
+
+      byte[] dimBytes = is.readNBytes(4);
+      ByteBuffer dimBuffer = ByteBuffer.wrap(dimBytes).order(ByteOrder.LITTLE_ENDIAN);
+      int dimension = dimBuffer.getInt();
+
+      log.info("File header - total vectors: {}, dimension: {}", numVectors, dimension);
+
+      int count = 0;
+      while (is.available() != 0) {
+        byte[] vectorBytes = is.readNBytes(dimension * 2);
+        if (vectorBytes.length != dimension * 2) break;
+        ByteBuffer bb = ByteBuffer.wrap(vectorBytes).order(ByteOrder.LITTLE_ENDIAN);
+        float[] row = new float[dimension];
+        for (int i = 0; i < dimension; i++) row[i] = Float.float16ToFloat(bb.getShort());
+        vectors.add(row);
+        count++;
+        if (numRows != -1 && count == numRows) break;
+        if (count % 1000 == 0) System.out.print(".");
+      }
+      System.out.println();
+      log.info("Reading complete. Read {} vectors out of {} in file.", count, numVectors);
+    } catch (Exception e) {
+      log.error("Error reading f16bin file", e);
+    }
+  }
+
   // Fixed method to read .ibin files (ground truth neighbors)
   public static ArrayList<int[]> readIbin(String filePath, int numRows) {
     log.info("Reading {} from file: {}", numRows, filePath);

@@ -166,16 +166,20 @@ public class LuceneCuvsBenchmarks {
 
     long parseStartTime = System.currentTimeMillis();
 
-    // Check if dataset is .fvecs or .fbin format and handle it directly
-    if (config.datasetFile.contains("fvecs") || config.datasetFile.contains("fbin")) {
-      log.info("Detected .fvecs or .fbin file format. Loading directly without MapDB...");
+    // Check if dataset is .fvecs, .fbin, or .f16bin format and handle it directly
+    if (config.datasetFile.contains("fvecs")
+        || config.datasetFile.contains("fbin")
+        || config.datasetFile.contains("f16bin")) {
+      log.info("Detected .fvecs, .fbin, or .f16bin file format. Loading directly without MapDB...");
 
       if (config.loadVectorsInMemory) {
         log.info("Loading all vectors in memory (loadVectorsInMemory is enabled)");
         long start = System.currentTimeMillis();
         List<float[]> loadedVectors = new ArrayList<float[]>();
 
-        if (config.datasetFile.contains("fbin")) {
+        if (config.datasetFile.contains("f16bin")) {
+          FBIvecsReader.readF16bin(config.datasetFile, config.numDocs, loadedVectors);
+        } else if (config.datasetFile.contains("fbin")) {
           FBIvecsReader.readFbin(config.datasetFile, config.numDocs, loadedVectors);
         } else {
           FBIvecsReader.readFvecs(config.datasetFile, config.numDocs, loadedVectors);
@@ -462,6 +466,8 @@ public class LuceneCuvsBenchmarks {
           }
         } else if (config.queryFile.contains("fvecs")) {
           FBIvecsReader.readFvecs(config.queryFile, -1, queries);
+        } else if (config.queryFile.contains("f16bin")) {
+          FBIvecsReader.readF16bin(config.queryFile, -1, queries);
         } else if (config.queryFile.contains("fbin")) {
           FBIvecsReader.readFbin(config.queryFile, -1, queries);
         } else if (config.queryFile.contains("bvecs")) {

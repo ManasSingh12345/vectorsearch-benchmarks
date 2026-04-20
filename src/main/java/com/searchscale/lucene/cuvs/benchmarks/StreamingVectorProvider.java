@@ -21,6 +21,7 @@ public class StreamingVectorProvider implements VectorProvider {
   private enum FileFormat {
     FVECS,
     FBIN,
+    F16BIN,
     BVECS,
     IVECS
   }
@@ -39,6 +40,8 @@ public class StreamingVectorProvider implements VectorProvider {
     // Determine file format
     if (filePath.contains("fvecs")) {
       this.format = FileFormat.FVECS;
+    } else if (filePath.contains("f16bin")) {
+      this.format = FileFormat.F16BIN;
     } else if (filePath.contains("fbin")) {
       this.format = FileFormat.FBIN;
     } else if (filePath.contains("bvecs")) {
@@ -57,8 +60,8 @@ public class StreamingVectorProvider implements VectorProvider {
     try (FileInputStream fis = new FileInputStream(filePath)) {
       java.io.InputStream is = isCompressed ? new GZIPInputStream(fis) : fis;
 
-      if (format == FileFormat.FBIN) {
-        // For .fbin: Read num_vectors first, then dimension
+      if (format == FileFormat.FBIN || format == FileFormat.F16BIN) {
+        // For .fbin/.f16bin: Read num_vectors first, then dimension
         byte[] numVecBytes = is.readNBytes(4);
         ByteBuffer numVecBuffer = ByteBuffer.wrap(numVecBytes).order(ByteOrder.LITTLE_ENDIAN);
         int numVectors = numVecBuffer.getInt();
@@ -68,7 +71,8 @@ public class StreamingVectorProvider implements VectorProvider {
         tempDimension = dimBuffer.getInt();
 
         tempVectorCount = maxVectors > 0 ? Math.min(maxVectors, numVectors) : numVectors;
-        tempVectorSize = 4L * tempDimension; // just dimension floats (no per-vector dimension)
+        // f16bin: 2 bytes per element; fbin: 4 bytes per element
+        tempVectorSize = (format == FileFormat.F16BIN ? 2L : 4L) * tempDimension;
 
         log.info("File header - total vectors: {}, dimension: {}", numVectors, tempDimension);
       } else {
@@ -167,7 +171,7 @@ public class StreamingVectorProvider implements VectorProvider {
         FileChannel channel = raf.getChannel()) {
 
       long position;
-      if (format == FileFormat.FBIN) {
+      if (format == FileFormat.FBIN || format == FileFormat.F16BIN) {
         // Skip initial header (8 bytes: num_vectors + dimension) and go to vector position
         position = 8 + index * vectorSize;
       } else {
@@ -214,6 +218,13 @@ public class StreamingVectorProvider implements VectorProvider {
         }
         break;
 
+      case F16BIN:
+        // No dimension prefix; each element is a raw float16 bit pattern in a short
+        for (int i = 0; i < dimension; i++) {
+          vector[i] = Float.float16ToFloat(buffer.getShort());
+        }
+        break;
+
       case BVECS:
         // Read and verify dimension, then read bytes as floats
         int bvecsDimension = buffer.getInt();
@@ -257,13 +268,13 @@ public class StreamingVectorProvider implements VectorProvider {
     try (FileInputStream fis = new FileInputStream(filePath);
         GZIPInputStream gzis = new GZIPInputStream(fis)) {
 
-      if (format == FileFormat.FBIN) {
+      if (format == FileFormat.FBIN || format == FileFormat.F16BIN) {
         // Skip initial header (8 bytes: num_vectors + dimension)
         gzis.skip(8);
 
-        // Read vectors until we reach the desired index
+        int bytesPerVector = (int) vectorSize;
         for (int i = 0; i <= index; i++) {
-          byte[] vectorBytes = new byte[dimension * 4];
+          byte[] vectorBytes = new byte[bytesPerVector];
           if (gzis.read(vectorBytes) != vectorBytes.length) {
             throw new IOException("Unexpected end of file reading vector " + i);
           }
