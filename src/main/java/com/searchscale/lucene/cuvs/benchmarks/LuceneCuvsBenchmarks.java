@@ -43,6 +43,7 @@ import org.apache.lucene.codecs.lucene101.Lucene101Codec.Mode;
 import org.apache.lucene.codecs.lucene99.Lucene99HnswVectorsFormat;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.document.KnnFloatVectorField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.DirectoryReader;
@@ -55,6 +56,7 @@ import org.apache.lucene.index.SegmentWriteState;
 import org.apache.lucene.index.TieredMergePolicy;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.KnnFloatVectorQuery;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TopScoreDocCollectorManager;
@@ -409,6 +411,7 @@ public class LuceneCuvsBenchmarks {
               Document doc = new Document();
               doc.add(new StringField("id", String.valueOf(id), Field.Store.YES));
               doc.add(new KnnFloatVectorField(config.vectorColName, vector, EUCLIDEAN));
+              doc.add(new IntPoint("filter_bucket", id % 1000));
               try {
                 writer.addDocument(doc);
                 if ((id + 1) % 25000 == 0) {
@@ -481,6 +484,16 @@ public class LuceneCuvsBenchmarks {
         log.info("{} queries available from the mapdb file", queries.size());
       }
 
+      // filterRejectRate > 0: select the passing fraction via a fixed numeric bucket per doc (id %
+      // 1000).
+      // Buckets [0, failBuckets-1] are rejected; buckets [failBuckets, 999] pass.
+      Query filterQuery = null;
+      if (config.filterRejectRate > 0.0) {
+        int failBuckets = (int) Math.round(config.filterRejectRate * 1000);
+        filterQuery = IntPoint.newRangeQuery("filter_bucket", failBuckets, 999);
+      }
+      final Query effectiveFilter = filterQuery;
+
       ExecutorService pool = Executors.newFixedThreadPool(config.queryThreads);
       AtomicInteger queriesFinished = new AtomicInteger(0);
       ConcurrentHashMap<Integer, Double> queryLatencies = new ConcurrentHashMap<Integer, Double>();
@@ -508,7 +521,7 @@ public class LuceneCuvsBenchmarks {
                           config.vectorColName,
                           queries.get(currentQueryId),
                           effectiveEfSearch,
-                          null,
+                          effectiveFilter,
                           config.cagraITopK,
                           config.cagraSearchWidth,
                           config.cagraThreadBlockSize,
@@ -517,7 +530,10 @@ public class LuceneCuvsBenchmarks {
                   int effectiveEfSearch = config.getEffectiveEfSearch();
                   query =
                       new KnnFloatVectorQuery(
-                          config.vectorColName, queries.get(currentQueryId), effectiveEfSearch);
+                          config.vectorColName,
+                          queries.get(currentQueryId),
+                          effectiveEfSearch,
+                          effectiveFilter);
                 }
 
                 TopDocs topDocs;

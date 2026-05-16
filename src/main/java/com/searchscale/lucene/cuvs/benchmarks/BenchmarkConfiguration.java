@@ -36,6 +36,8 @@ public class BenchmarkConfiguration {
   public int forceMerge;
   public boolean enableTieredMerge;
   public boolean enableIndexWriterInfoStream;
+  public double filterRejectRate =
+      0.0; // 0.0 = no filter; fraction of docs rejected (higher = harder filter, steps of 0.001)
 
   // Lucene HNSW parameters
   public int hnswMaxConn = 16; // 16 default (max 512)
@@ -134,6 +136,7 @@ public class BenchmarkConfiguration {
     sb.append("Enable TieredMerge: ").append(enableTieredMerge).append('\n');
     sb.append("Num HNSW merge threads: ").append(hnswMergeThreads).append('\n');
     sb.append("enableIndexWriterInfoStream: ").append(enableIndexWriterInfoStream).append('\n');
+    sb.append("filterRejectRate: ").append(filterRejectRate).append('\n');
 
     sb.append("------- algo parameters ------\n");
     if (isLucene()) {

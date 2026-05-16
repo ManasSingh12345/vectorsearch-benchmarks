@@ -16,7 +16,8 @@
       "forceMerge": 0,
       "enableTieredMerge": true,
       "enableIndexWriterInfoStream": false,
-      "cuvsWorkspacePoolSize": 4194304
+      "cuvsWorkspacePoolSize": 4194304,
+      "filterRejectRate": [0.0, 0.001]
     },
     "algorithms": {
       "CAGRA_SEARCH": {

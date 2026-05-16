@@ -43,6 +43,7 @@ SEARCH_ONLY_PARAMS = {
     'cuVSIvfPqSearchParamsInternalDistanceDtype',
     'cuVSIvfPqSearchParamsLutDtype',
     'cuVSIvfPqSearchParamsPreferredShmemCarveout',
+    'filterRejectRate',
 }
 
 # Clean configs directory
