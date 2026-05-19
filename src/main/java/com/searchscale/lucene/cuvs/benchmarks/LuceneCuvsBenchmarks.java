@@ -507,131 +507,136 @@ public class LuceneCuvsBenchmarks {
       for (int t = 0; t < config.queryThreads; t++) {
         pool.submit(
             () -> {
-              int currentQueryId;
-              while ((currentQueryId = queryId.getAndIncrement()) <= config.numQueriesToRun) {
-                if (currentQueryId == config.numWarmUpQueries + 1) {
-                  postWarmupStartTime.compareAndSet(0, System.nanoTime());
-                }
-                KnnFloatVectorQuery query;
-
-                if (config.algoToRun.equals(Codex.CAGRA_SEARCH)) {
-                  int effectiveEfSearch = config.getEffectiveEfSearch();
-                  query =
-                      new GPUKnnFloatVectorQuery(
-                          config.vectorColName,
-                          queries.get(currentQueryId),
-                          effectiveEfSearch,
-                          effectiveFilter,
-                          config.cagraITopK,
-                          config.cagraSearchWidth,
-                          config.cagraThreadBlockSize,
-                          config.cagraSearchAlgo);
-                } else {
-                  int effectiveEfSearch = config.getEffectiveEfSearch();
-                  query =
-                      new KnnFloatVectorQuery(
-                          config.vectorColName,
-                          queries.get(currentQueryId),
-                          effectiveEfSearch,
-                          effectiveFilter);
-                }
-
-                TopDocs topDocs;
-                long searchStartTime = System.nanoTime();
-                try {
-                  int effectiveEfSearch = config.getEffectiveEfSearch();
-                  TopScoreDocCollectorManager collectorManager =
-                      new TopScoreDocCollectorManager(
-                          effectiveEfSearch, null, Integer.MAX_VALUE, true);
-                  topDocs = indexSearcher.search(query, collectorManager);
-                } catch (IOException e) {
-                  throw new RuntimeException("Problem during executing a query: ", e);
-                }
-                double searchTimeTakenMs = (System.nanoTime() - searchStartTime) / 1_000_000.0;
-                // log.info("End to end search took: " + searchTimeTakenMs);
-                if (currentQueryId > config.numWarmUpQueries) {
-                  queryLatencies.put(currentQueryId, searchTimeTakenMs);
-                }
-                int finishedCount = queriesFinished.incrementAndGet();
-
-                // Log progress every 1000 queries
-                if (finishedCount % 1000 == 0 || finishedCount == config.numQueriesToRun) {
-                  log.info(
-                      "Done querying "
-                          + finishedCount
-                          + " out of "
-                          + config.numQueriesToRun
-                          + " queries.");
-                }
-
-                ScoreDoc[] hits = topDocs.scoreDocs;
-                List<Integer> neighbors = new ArrayList<>();
-                List<Float> scores = new ArrayList<>();
-
-                // Debug: Log search results for first query
-                if (queryId.get() == 0) {
-                  log.info(
-                      "Debug: First query returned "
-                          + hits.length
-                          + " hits (ef-search candidates)");
-                  log.info(
-                      "Debug: Will select top "
-                          + config.topK
-                          + " from "
-                          + hits.length
-                          + " candidates");
-                }
-                int numResultsToTake = Math.min(config.topK, hits.length);
-                long retrievalStartTime = System.nanoTime();
-                for (int i = 0; i < numResultsToTake; i++) {
-                  ScoreDoc hit = hits[i];
-                  try {
-                    Document d = indexReader.storedFields().document(hit.doc);
-                    neighbors.add(Integer.parseInt(d.get("id")));
-                  } catch (IOException e) {
-                    e.printStackTrace();
+              try {
+                int currentQueryId;
+                while ((currentQueryId = queryId.getAndIncrement()) <= config.numQueriesToRun) {
+                  if (currentQueryId == config.numWarmUpQueries + 1) {
+                    postWarmupStartTime.compareAndSet(0, System.nanoTime());
                   }
-                  scores.add(hit.score);
-                }
-                double retrievalTimeTakenMs =
-                    (System.nanoTime() - retrievalStartTime) / 1_000_000.0;
-                if (currentQueryId > config.numWarmUpQueries) {
-                  retrievalLatencies.put(currentQueryId, retrievalTimeTakenMs);
-                }
+                  KnnFloatVectorQuery query;
 
-                // Debug: Log results for all queries
-                log.debug(
-                    "Query "
-                        + currentQueryId
-                        + " - First 5 neighbors: "
-                        + neighbors.subList(0, Math.min(5, neighbors.size())));
-                log.debug(
-                    "Query "
-                        + currentQueryId
-                        + " - First 5 distances: "
-                        + scores.subList(0, Math.min(5, scores.size())));
-                int[] expectedNeighbors = groundTruth.get(currentQueryId);
-                log.debug(
-                    "Query "
-                        + currentQueryId
-                        + " - Expected neighbors: "
-                        + java.util.Arrays.toString(
-                            java.util.Arrays.copyOf(
-                                expectedNeighbors, Math.min(5, expectedNeighbors.length))));
+                  if (config.algoToRun.equals(Codex.CAGRA_SEARCH)) {
+                    int effectiveEfSearch = config.getEffectiveEfSearch();
+                    query =
+                        new GPUKnnFloatVectorQuery(
+                            config.vectorColName,
+                            queries.get(currentQueryId),
+                            effectiveEfSearch,
+                            effectiveFilter,
+                            config.cagraITopK,
+                            config.cagraSearchWidth,
+                            config.cagraThreadBlockSize,
+                            config.cagraSearchAlgo);
+                  } else {
+                    int effectiveEfSearch = config.getEffectiveEfSearch();
+                    query =
+                        new KnnFloatVectorQuery(
+                            config.vectorColName,
+                            queries.get(currentQueryId),
+                            effectiveEfSearch,
+                            effectiveFilter);
+                  }
 
-                if (currentQueryId > config.numWarmUpQueries) {
-                  QueryResult result =
-                      new QueryResult(
-                          config.algoToRun.toString(),
-                          currentQueryId,
-                          neighbors,
-                          groundTruth.get(currentQueryId),
-                          scores,
-                          searchTimeTakenMs);
-                  queryResults.add(result);
-                } else {
-                  log.info("Skipping warmup query: {}", currentQueryId);
+                  TopDocs topDocs;
+                  long searchStartTime = System.nanoTime();
+                  try {
+                    int effectiveEfSearch = config.getEffectiveEfSearch();
+                    TopScoreDocCollectorManager collectorManager =
+                        new TopScoreDocCollectorManager(
+                            effectiveEfSearch, null, Integer.MAX_VALUE, true);
+                    topDocs = indexSearcher.search(query, collectorManager);
+                  } catch (IOException e) {
+                    throw new RuntimeException("Problem during executing a query: ", e);
+                  }
+                  double searchTimeTakenMs = (System.nanoTime() - searchStartTime) / 1_000_000.0;
+                  // log.info("End to end search took: " + searchTimeTakenMs);
+                  if (currentQueryId > config.numWarmUpQueries) {
+                    queryLatencies.put(currentQueryId, searchTimeTakenMs);
+                  }
+                  int finishedCount = queriesFinished.incrementAndGet();
+
+                  // Log progress every 1000 queries
+                  if (finishedCount % 1000 == 0 || finishedCount == config.numQueriesToRun) {
+                    log.info(
+                        "Done querying "
+                            + finishedCount
+                            + " out of "
+                            + config.numQueriesToRun
+                            + " queries.");
+                  }
+
+                  ScoreDoc[] hits = topDocs.scoreDocs;
+                  List<Integer> neighbors = new ArrayList<>();
+                  List<Float> scores = new ArrayList<>();
+
+                  // Debug: Log search results for first query
+                  if (queryId.get() == 0) {
+                    log.info(
+                        "Debug: First query returned "
+                            + hits.length
+                            + " hits (ef-search candidates)");
+                    log.info(
+                        "Debug: Will select top "
+                            + config.topK
+                            + " from "
+                            + hits.length
+                            + " candidates");
+                  }
+                  int numResultsToTake = Math.min(config.topK, hits.length);
+                  long retrievalStartTime = System.nanoTime();
+                  for (int i = 0; i < numResultsToTake; i++) {
+                    ScoreDoc hit = hits[i];
+                    try {
+                      Document d = indexReader.storedFields().document(hit.doc);
+                      neighbors.add(Integer.parseInt(d.get("id")));
+                    } catch (IOException e) {
+                      e.printStackTrace();
+                    }
+                    scores.add(hit.score);
+                  }
+                  double retrievalTimeTakenMs =
+                      (System.nanoTime() - retrievalStartTime) / 1_000_000.0;
+                  if (currentQueryId > config.numWarmUpQueries) {
+                    retrievalLatencies.put(currentQueryId, retrievalTimeTakenMs);
+                  }
+
+                  // Debug: Log results for all queries
+                  log.debug(
+                      "Query "
+                          + currentQueryId
+                          + " - First 5 neighbors: "
+                          + neighbors.subList(0, Math.min(5, neighbors.size())));
+                  log.debug(
+                      "Query "
+                          + currentQueryId
+                          + " - First 5 distances: "
+                          + scores.subList(0, Math.min(5, scores.size())));
+                  int[] expectedNeighbors = groundTruth.get(currentQueryId);
+                  log.debug(
+                      "Query "
+                          + currentQueryId
+                          + " - Expected neighbors: "
+                          + java.util.Arrays.toString(
+                              java.util.Arrays.copyOf(
+                                  expectedNeighbors, Math.min(5, expectedNeighbors.length))));
+
+                  if (currentQueryId > config.numWarmUpQueries) {
+                    QueryResult result =
+                        new QueryResult(
+                            config.algoToRun.toString(),
+                            currentQueryId,
+                            neighbors,
+                            groundTruth.get(currentQueryId),
+                            scores,
+                            searchTimeTakenMs);
+                    queryResults.add(result);
+                  } else {
+                    log.info("Skipping warmup query: {}", currentQueryId);
+                  }
                 }
+              } catch (Throwable throwable) {
+                log.error("Worker thread failed: ", throwable);
+                throw throwable;
               }
             });
       }
