@@ -127,7 +127,7 @@ Run sweeps as below (modify according to your local setup):
 
 ```sh
 cd vectorsearch-benchmarks
-CUDA_DEVICE_MAX_CONNECTIONS=<1 to 32, default 8; should size according to `queryThreads` in sweep config> ./run_sweep.sh --data-dir ../data --datasets datasets_test_1M.json --sweeps sweeps_test_1M.json --configs-dir configs --results-dir results --run-benchmarks
+CUDA_DEVICE_MAX_CONNECTIONS=<1 to 32, default 8; should size according to `queryThreads` in sweep config> ./run_sweep.sh --data-dir ../data --datasets datasets_test_1M.json --sweeps sweeps/test_1M.json --configs-dir configs --results-dir results --run-benchmarks
 ```
 
 If needed, ensure files in data/wiki_all_1M are named as follows:
