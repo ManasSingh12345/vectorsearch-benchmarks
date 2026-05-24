@@ -37,9 +37,26 @@ CSV_COLUMNS = [
     "build GPU",
     "graph_degree",
     "intermediate_graph_degree",
+    "graph_build_algo",
+    "ivf_nlists",
+    "ivf_pq_dim",
+    "ivf_pq_bits",
+    "ivf_kmeans_iters",
+    "ivf_nprobes",
+    "ivf_refinement_rate",
     "label",
     "run_directory",
 ]
+
+# Maps CSV column names to keys in results.json configuration.
+IVF_PQ_CONFIG_KEYS = {
+    "ivf_nlists": "cuVSIvfPqIndexParamsNLists",
+    "ivf_pq_dim": "cuVSIvfPqIndexParamsPqDim",
+    "ivf_pq_bits": "cuVSIvfPqIndexParamsPqBits",
+    "ivf_kmeans_iters": "cuVSIvfPqIndexParamsKmeansNIters",
+    "ivf_nprobes": "cuVSIvfPqSearchParamsNProbes",
+    "ivf_refinement_rate": "cuVSIvfPqParamsRefinementRate",
+}
 
 
 def _metric(metrics: Dict[str, Any], suffix: str) -> Optional[float]:
@@ -94,6 +111,26 @@ def create_index_name(config: Dict[str, Any]) -> str:
     return f"ef{ef_search}"
 
 
+def _uses_ivf_pq_graph_build(config: Dict[str, Any]) -> bool:
+    return config.get("cagraGraphBuildAlgo") == "IVF_PQ"
+
+
+def ivf_pq_fields(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract IVF-PQ sweep fields; use NaN when graph build is not IVF_PQ."""
+    graph_build_algo = config.get("cagraGraphBuildAlgo")
+    if not _uses_ivf_pq_graph_build(config):
+        return {
+            "graph_build_algo": graph_build_algo,
+            **{column: float("nan") for column in IVF_PQ_CONFIG_KEYS},
+        }
+
+    fields: Dict[str, Any] = {"graph_build_algo": graph_build_algo}
+    for column, config_key in IVF_PQ_CONFIG_KEYS.items():
+        value = config.get(config_key)
+        fields[column] = float("nan") if value is None else value
+    return fields
+
+
 def create_label(config: Dict[str, Any]) -> str:
     algo = config.get("algoToRun", "")
     parts = [
@@ -103,6 +140,14 @@ def create_label(config: Dict[str, Any]) -> str:
         f"ig={config.get('cagraIntermediateGraphDegree', '')}",
         f"qt={config.get('queryThreads', '')}",
     ]
+    if _uses_ivf_pq_graph_build(config):
+        parts.extend(
+            [
+                f"lists={config.get('cuVSIvfPqIndexParamsNLists', '')}",
+                f"probes={config.get('cuVSIvfPqSearchParamsNProbes', '')}",
+                f"refine={config.get('cuVSIvfPqParamsRefinementRate', '')}",
+            ]
+        )
     return f"{algo} " + " ".join(parts)
 
 
@@ -151,6 +196,7 @@ def row_from_results(results_path: str) -> Dict[str, Any]:
         "build GPU": build_time if build_time is not None else float("nan"),
         "graph_degree": config.get("cagraGraphDegree"),
         "intermediate_graph_degree": config.get("cagraIntermediateGraphDegree"),
+        **ivf_pq_fields(config),
         "label": create_label(config),
         "run_directory": config.get("resultsDirectory", results_path),
     }
