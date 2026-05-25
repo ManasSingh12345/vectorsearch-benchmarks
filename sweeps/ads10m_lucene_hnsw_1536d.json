@@ -1,19 +1,19 @@
 {
-  "wiki1m_hnswlib_base": {
-    "dataset": "wiki_all_1M",
+  "ads10m_lucene_hnsw": {
+    "dataset": "ads_sourcing-10m",
     "common-params": {
-      "numDocs": 1000000,
+      "numDocs": 10000000,
       "numQueriesToRun": 10000,
       "numWarmUpQueries": 5000,
       "flushFreq": 10000000,
-      "topK": 100,
-      "efSearch": [100, 120, 200, 400, 600, 800],
-      "queryThreads": [1, 8, 64],
+      "topK": 200,
+      "efSearch": [200, 400, 600, 800, 1000],
+      "queryThreads": [64],
       "vectorColName": "vector",
       "createIndexInMemory": false,
       "cleanIndexDirectory": true,
       "saveResultsOnDisk": true,
-      "forceMerge": 0,
+      "forceMerge": 1,
       "enableTieredMerge": true,
       "enableIndexWriterInfoStream": false,
       "filterRejectRate": 0.0
@@ -21,8 +21,8 @@
     "algorithms": {
       "LUCENE_HNSW": {
         "indexDirPath": "hnswIndex",
-        "hnswMaxConn": [12, 16, 24, 36],
-        "hnswBeamWidth": [64, 128, 256, 512],
+        "hnswMaxConn": [32, 64],
+        "hnswBeamWidth": 128,
         "hnswMergeThreads": 32,
         "numIndexThreads": 32
       }
