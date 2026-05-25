@@ -26,12 +26,13 @@
         "cagraGraphDegree": [32],
         "cagraIntermediateGraphDegree": [64],
         "cagraHnswLayers": [1],
-        "cuvsWriterThreads": 32,
-        "numIndexThreads": 32,
+        "cuvsWriterThreads": 4,
+        "numIndexThreads": 4,
         "cagraITopK": 15,
         "cagraSearchWidth": [4, 16],
         "cagraSearchAlgo": "SINGLE_CTA",
         "cagraThreadBlockSize": [0],
+        "cuVSIvfPqIndexParamsConservativeMemoryAllocation": true,
         "cuVSIvfPqIndexParamsNLists": [1024, 2048],
         "cuVSIvfPqIndexParamsPqDim": [0],
         "cuVSIvfPqIndexParamsPqBits": [8],
@@ -45,16 +46,17 @@
         "cagraGraphDegree": [32],
         "cagraIntermediateGraphDegree": [64],
         "cagraHnswLayers": [1],
-        "cuvsWriterThreads": 32,
-        "numIndexThreads": 32,
+        "cuvsWriterThreads": 4,
+        "numIndexThreads": 4,
         "hnswMaxConn": [32],
         "hnswBeamWidth": [32],
+        "cuVSIvfPqIndexParamsConservativeMemoryAllocation": true,
         "cuVSIvfPqIndexParamsNLists": [1024, 2048],
         "cuVSIvfPqIndexParamsPqDim": [0],
         "cuVSIvfPqIndexParamsPqBits": [8],
         "cuVSIvfPqIndexParamsKmeansNIters": [25],
         "cuVSIvfPqSearchParamsNProbes": [10, 20, 50],
-        "cuVSIvfPqParamsRefinementRate": [1, 2]
+        "cuVSIvfPqParamsRefinementRate": [2]
       }
     }
   }
