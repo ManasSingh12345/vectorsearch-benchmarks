@@ -7,7 +7,7 @@
       "numWarmUpQueries": 5000,
       "flushFreq": 10000000,
       "topK": 100,
-      "efSearch": [50, 100, 150],
+      "efSearch": [50, 100, 120, 150, 200, 400, 600, 800],
       "queryThreads": [1, 8, 64],
       "vectorColName": "vector",
       "createIndexInMemory": false,
